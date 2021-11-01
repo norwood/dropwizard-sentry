@@ -7,6 +7,7 @@ import io.dropwizard.configuration.ConfigurationException;
 import io.dropwizard.logging.async.AsyncLoggingEventAppenderFactory;
 import io.dropwizard.logging.filter.ThresholdLevelFilterFactory;
 import io.dropwizard.logging.layout.DropwizardLayoutFactory;
+import io.sentry.logback.SentryAppender;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -27,13 +28,10 @@ public class SentryAppenderFactoryTest {
     public void hasValidDefaults() throws IOException, ConfigurationException {
         final SentryAppenderFactory factory = new SentryAppenderFactory();
 
-        assertNull("default dsn is unset", factory.getDsn());
-        assertFalse("default environment is empty", factory.getEnvironment().isPresent());
-        assertFalse("default extraTags is empty", factory.getEnvironment().isPresent());
-        assertFalse("default sentryFactory is empty", factory.getSentryClientFactory().isPresent());
-        assertFalse("default release is empty", factory.getRelease().isPresent());
-        assertFalse("default serverName is empty", factory.getServerName().isPresent());
-        assertFalse("default tags are empty", factory.getMdcTags().isPresent());
+        assertNull("default dsn is unset", factory.dsn);
+        assertFalse("default environment is empty", factory.environment.isPresent());
+        assertFalse("default release is empty", factory.release.isPresent());
+        assertFalse("default serverName is empty", factory.serverName.isPresent());
     }
 
     @Test(expected = NullPointerException.class)
@@ -44,12 +42,11 @@ public class SentryAppenderFactoryTest {
     @Test
     public void buildSentryAppenderShouldWorkWithValidConfiguration() {
         SentryAppenderFactory factory = new SentryAppenderFactory();
-        factory.setDsn("https://user:pass@app.sentry.io/id");
+        factory.dsn = "https://user:pass@app.sentry.io/id";
 
-        Appender<ILoggingEvent> appender
-                = factory.build(context, "", layoutFactory, levelFilterFactory, asyncAppenderFactory);
+        Appender<ILoggingEvent> appender = factory.build(context, "", layoutFactory, levelFilterFactory, asyncAppenderFactory);
 
-        assertThat(appender, instanceOf(DelegateAppender.class));
+        assertThat(appender, instanceOf(SentryAppender.class));
     }
 
 }
