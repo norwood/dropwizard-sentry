@@ -38,7 +38,7 @@ public final class SentryBootstrap {
      *                        the root logger
      */
     public static void bootstrap(String dsn, boolean cleanRootLogger) {
-        bootstrap(dsn, Optional.empty(), Optional.empty(), cleanRootLogger);
+        bootstrap(dsn, null, null, cleanRootLogger);
     }
 
     /**
@@ -51,8 +51,8 @@ public final class SentryBootstrap {
      * @param cleanRootLogger If true, detach and stop all other appenders from
      *                        the root logger
      */
-    public static void bootstrap(String dsn, Optional<String> environment, Optional<String> release, boolean cleanRootLogger) {
-        bootstrap(dsn, environment, release, Optional.empty(), cleanRootLogger);
+    public static void bootstrap(String dsn, String environment, String release, boolean cleanRootLogger) {
+        bootstrap(dsn, environment, release, null, cleanRootLogger);
     }
 
     /**
@@ -66,29 +66,29 @@ public final class SentryBootstrap {
      * @param cleanRootLogger If true, detach and stop all other appenders from
      *                        the root logger
      */
-    public static void bootstrap(String dsn, Optional<String> environment, Optional<String> release, Optional<String> serverName, boolean cleanRootLogger) {
-        bootstrap(dsn, Optional.empty(), environment, release, Optional.empty(), cleanRootLogger);
+    public static void bootstrap(String dsn, String environment, String release, String serverName, boolean cleanRootLogger) {
+        bootstrap(dsn, null, environment, release, null, cleanRootLogger);
     }
 
     /**
      * Bootstrap the SLF4J root logger with a configured
      * {@link io.sentry.logback.SentryAppender}.
      *
-     * @param dsn               The DSN (Data Source Name) for your project
-     * @param thresholdOptional log events threshold
-     * @param environment       The environment name to pass to Sentry
-     * @param release           The release name to pass to Sentry
-     * @param serverName        The server name to pass to Sentry
-     * @param cleanRootLogger   If true, detach and stop all other appenders from
-     *                          the root logger
+     * @param dsn             The DSN (Data Source Name) for your project
+     * @param threshold       log events threshold
+     * @param environment     The environment name to pass to Sentry
+     * @param release         The release name to pass to Sentry
+     * @param serverName      The server name to pass to Sentry
+     * @param cleanRootLogger If true, detach and stop all other appenders from
+     *                        the root logger
      */
-    public static void bootstrap(String dsn, Optional<String> thresholdOptional, Optional<String> environment, Optional<String> release, Optional<String> serverName, boolean cleanRootLogger) {
+    public static void bootstrap(String dsn, String threshold, String environment, String release, String serverName, boolean cleanRootLogger) {
         SentryAppenderFactory factory = new SentryAppenderFactory();
         factory.dsn = dsn;
         factory.environment = environment;
         factory.release = release;
         factory.serverName = serverName;
-        thresholdOptional.ifPresent(t -> factory.setThreshold(t));
+        Optional.ofNullable(threshold).ifPresent(factory::setThreshold);
         registerAppender(dsn, cleanRootLogger, factory);
     }
 
@@ -105,10 +105,10 @@ public final class SentryBootstrap {
     public static class Builder {
 
         private final String dsn;
-        private Optional<String> thresholdOptional = Optional.empty();
-        private Optional<String> environment = Optional.empty();
-        private Optional<String> release = Optional.empty();
-        private Optional<String> serverName = Optional.empty();
+        private String threshold = null;
+        private String environment = null;
+        private String release = null;
+        private String serverName = null;
         private boolean cleanRootLogger;
 
         public static Builder withDsn(String dsn) {
@@ -128,7 +128,7 @@ public final class SentryBootstrap {
          * @return this builder
          */
         public Builder withThreshold(String threshold) {
-            this.thresholdOptional = Optional.of(threshold);
+            this.threshold = threshold;
             return this;
         }
 
@@ -137,7 +137,7 @@ public final class SentryBootstrap {
          * @return this builder
          */
         public Builder withEnvironment(String environment) {
-            this.environment = Optional.of(environment);
+            this.environment = environment;
             return this;
         }
 
@@ -146,7 +146,7 @@ public final class SentryBootstrap {
          * @return this builder
          */
         public Builder withRelease(String release) {
-            this.release = Optional.of(release);
+            this.release = release;
             return this;
         }
 
@@ -155,7 +155,7 @@ public final class SentryBootstrap {
          * @return this builder
          */
         public Builder withServerName(String serverName) {
-            this.serverName = Optional.of(serverName);
+            this.serverName = serverName;
             return this;
         }
 
@@ -174,7 +174,7 @@ public final class SentryBootstrap {
          * {@link io.sentry.logback.SentryAppender}.
          */
         public void bootstrap() {
-            SentryBootstrap.bootstrap(dsn, thresholdOptional, environment, release, serverName, cleanRootLogger);
+            SentryBootstrap.bootstrap(dsn, threshold, environment, release, serverName, cleanRootLogger);
         }
     }
 }

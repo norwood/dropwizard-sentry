@@ -14,7 +14,6 @@ import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
 public class SentryAppenderFactoryTest {
@@ -29,9 +28,9 @@ public class SentryAppenderFactoryTest {
         final SentryAppenderFactory factory = new SentryAppenderFactory();
 
         assertNull("default dsn is unset", factory.dsn);
-        assertFalse("default environment is empty", factory.environment.isPresent());
-        assertFalse("default release is empty", factory.release.isPresent());
-        assertFalse("default serverName is empty", factory.serverName.isPresent());
+        assertNull("default environment is unset", factory.environment);
+        assertNull("default release is unset", factory.release);
+        assertNull("default serverName is unset", factory.serverName);
     }
 
     @Test(expected = NullPointerException.class)

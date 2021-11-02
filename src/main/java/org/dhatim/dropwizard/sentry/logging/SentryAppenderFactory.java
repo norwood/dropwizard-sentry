@@ -1,5 +1,6 @@
 package org.dhatim.dropwizard.sentry.logging;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
@@ -10,6 +11,7 @@ import io.dropwizard.logging.AbstractAppenderFactory;
 import io.dropwizard.logging.async.AsyncAppenderFactory;
 import io.dropwizard.logging.filter.LevelFilterFactory;
 import io.dropwizard.logging.layout.LayoutFactory;
+import io.sentry.Sentry;
 import io.sentry.SentryOptions;
 import io.sentry.logback.SentryAppender;
 import org.dhatim.dropwizard.sentry.SentryConfigurator;
@@ -33,25 +35,25 @@ public class SentryAppenderFactory extends AbstractAppenderFactory<ILoggingEvent
     public String dsn = null;
 
     @JsonProperty
-    public Optional<String> environment = Optional.empty();
+    public String environment = null;
 
     @JsonProperty
-    public Optional<Map<String, String>> tags = Optional.empty();
+    public Map<String, String> tags = null;
 
     @JsonProperty
-    public Optional<String> release = Optional.empty();
+    public String release = null;
 
     @JsonProperty
-    public Optional<String> serverName = Optional.empty();
+    public String serverName = null;
 
     @JsonProperty
-    public Optional<List<String>> inAppIncludes = Optional.empty();
+    public List<String> inAppIncludes = null;
 
     @JsonProperty
-    public Optional<List<String>> inAppExcludes = Optional.empty();
+    public List<String> inAppExcludes = null;
 
     @JsonProperty
-    public Optional<String> configurator = Optional.empty();
+    public String configurator = null;
 
     @Override
     public Appender<ILoggingEvent> build(LoggerContext context,
@@ -61,14 +63,14 @@ public class SentryAppenderFactory extends AbstractAppenderFactory<ILoggingEvent
                                          AsyncAppenderFactory<ILoggingEvent> asyncAppenderFactory) {
         checkNotNull(context);
         SentryOptions options = new SentryOptions();
-        options.setDsn(this.dsn);
-        environment.ifPresent(options::setEnvironment);
-        tags.ifPresent(tags -> tags.forEach(options::setTag));
-        release.ifPresent(options::setRelease);
-        serverName.ifPresent(options::setServerName);
-        inAppIncludes.ifPresent(inAppIncludes -> inAppIncludes.forEach(options::addInAppInclude));
-        inAppExcludes.ifPresent(inAppExcludes -> inAppExcludes.forEach(options::addInAppExclude));
-        configurator.ifPresent(configurator -> {
+        options.setDsn(dsn);
+        Optional.ofNullable(environment).ifPresent(options::setEnvironment);
+        Optional.ofNullable(tags).ifPresent(tags -> tags.forEach(options::setTag));
+        Optional.ofNullable(release).ifPresent(options::setRelease);
+        Optional.ofNullable(serverName).ifPresent(options::setServerName);
+        Optional.ofNullable(inAppIncludes).ifPresent(inAppIncludes -> inAppIncludes.forEach(options::addInAppInclude));
+        Optional.ofNullable(inAppExcludes).ifPresent(inAppExcludes -> inAppExcludes.forEach(options::addInAppExclude));
+        Optional.ofNullable(configurator).ifPresent(configurator -> {
             try {
                 Class<?> klass = Class.forName(configurator);
                 if (!SentryConfigurator.class.isAssignableFrom(klass)) {
@@ -85,11 +87,15 @@ public class SentryAppenderFactory extends AbstractAppenderFactory<ILoggingEvent
             }
         });
 
+        // close Sentry if previously initialized for bootstrap
+        Sentry.close();
         SentryAppender appender = new SentryAppender();
 
         appender.setOptions(options);
         appender.setName(APPENDER_NAME);
         appender.setContext(context);
+        appender.setMinimumBreadcrumbLevel(threshold);
+        appender.setMinimumEventLevel(threshold);
 
         appender.addFilter(levelFilterFactory.build(threshold));
         getFilterFactories().forEach(f -> appender.addFilter(f.build()));
