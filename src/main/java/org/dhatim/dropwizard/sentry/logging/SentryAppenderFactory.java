@@ -3,7 +3,6 @@ package org.dhatim.dropwizard.sentry.logging;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
-import ch.qos.logback.core.LogbackException;
 import ch.qos.logback.core.filter.Filter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -11,24 +10,18 @@ import io.dropwizard.logging.AbstractAppenderFactory;
 import io.dropwizard.logging.async.AsyncAppenderFactory;
 import io.dropwizard.logging.filter.LevelFilterFactory;
 import io.dropwizard.logging.layout.LayoutFactory;
-import io.sentry.DefaultSentryClientFactory;
-import io.sentry.SentryClient;
-import io.sentry.SentryClientFactory;
-import io.sentry.dsn.Dsn;
-import io.sentry.event.EventBuilder;
+import io.sentry.SentryOptions;
 import io.sentry.logback.SentryAppender;
+import org.dhatim.dropwizard.sentry.SentryConfigurator;
 import org.dhatim.dropwizard.sentry.filters.DroppingSentryLoggingFilter;
 
 import javax.validation.constraints.NotNull;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import io.sentry.Sentry;
-import java.net.URI;
 
 @JsonTypeName("sentry")
 public class SentryAppenderFactory extends AbstractAppenderFactory<ILoggingEvent> {
@@ -37,172 +30,76 @@ public class SentryAppenderFactory extends AbstractAppenderFactory<ILoggingEvent
 
     @NotNull
     @JsonProperty
-    private String dsn = null;
+    public String dsn = null;
 
     @JsonProperty
-    private Optional<String> environment = Optional.empty();
+    public Optional<String> environment = Optional.empty();
 
     @JsonProperty
-    private Optional<Map<String, String>> tags = Optional.empty();
+    public Optional<Map<String, String>> tags = Optional.empty();
 
     @JsonProperty
-    private Optional<Set<String>> mdcTags = Optional.empty();
+    public Optional<String> release = Optional.empty();
 
     @JsonProperty
-    private Optional<String> sentryClientFactory = Optional.empty();
+    public Optional<String> serverName = Optional.empty();
 
     @JsonProperty
-    private Optional<String> release = Optional.empty();
+    public Optional<List<String>> inAppIncludes = Optional.empty();
 
     @JsonProperty
-    private Optional<String> serverName = Optional.empty();
+    public Optional<List<String>> inAppExcludes = Optional.empty();
 
     @JsonProperty
-    private Optional<Map<String, Object>> extra = Optional.empty();
-
-    @JsonProperty
-    private Optional<List<String>> stacktraceAppPackages = Optional.empty();
-
-    public String getDsn() {
-        return dsn;
-    }
-
-    public void setDsn(String dsn) {
-        this.dsn = dsn;
-    }
-
-    public Optional<String> getEnvironment() {
-        return environment;
-    }
-
-    public void setEnvironment(Optional<String> environment) {
-        this.environment = environment;
-    }
-
-    public Optional<Map<String, String>> getTags() {
-        return tags;
-    }
-
-    public void setTags(Optional<Map<String, String>> tags) {
-        this.tags = tags;
-    }
-
-    public Optional<Set<String>> getMdcTags() {
-        return mdcTags;
-    }
-
-    public void setMdcTags(Optional<Set<String>> mdcTags) {
-        this.mdcTags = mdcTags;
-    }
-
-    public Optional<String> getSentryClientFactory() {
-        return sentryClientFactory;
-    }
-
-    public void setSentryClientFactory(Optional<String> sentryClientFactory) {
-        this.sentryClientFactory = sentryClientFactory;
-    }
-
-    public Optional<String> getRelease() {
-        return release;
-    }
-
-    public void setRelease(Optional<String> release) {
-        this.release = release;
-    }
-
-    public Optional<String> getServerName() {
-        return serverName;
-    }
-
-    public void setServerName(Optional<String> serverName) {
-        this.serverName = serverName;
-    }
-
-    public Optional<Map<String, Object>> getExtra() {
-        return extra;
-    }
-
-    public void setExtra(Optional<Map<String, Object>> extra) {
-        this.extra = extra;
-    }
-
-    public Optional<List<String>> getStacktraceAppPackages() {
-        return stacktraceAppPackages;
-    }
-
-    public void setStacktraceAppPackages(Optional<List<String>> stacktraceAppPackages) {
-        this.stacktraceAppPackages = stacktraceAppPackages;
-    }
+    public Optional<String> configurator = Optional.empty();
 
     @Override
     public Appender<ILoggingEvent> build(LoggerContext context,
-            String applicationName,
-            LayoutFactory<ILoggingEvent> layoutFactory,
-            LevelFilterFactory<ILoggingEvent> levelFilterFactory,
-            AsyncAppenderFactory<ILoggingEvent> asyncAppenderFactory) {
+                                         String applicationName,
+                                         LayoutFactory<ILoggingEvent> layoutFactory,
+                                         LevelFilterFactory<ILoggingEvent> levelFilterFactory,
+                                         AsyncAppenderFactory<ILoggingEvent> asyncAppenderFactory) {
         checkNotNull(context);
-
-        SentryClientFactory factory;
-        try {
-            String factoryClassName = sentryClientFactory.orElse(DefaultSentryClientFactory.class.getCanonicalName());
-            Class<? extends SentryClientFactory> factoryClass = Class.forName(factoryClassName).asSubclass(SentryClientFactory.class);
-            factory = factoryClass.getConstructor().newInstance();
-        } catch (ReflectiveOperationException ex) {
-            throw new RuntimeException(ex);
-        }
-        String dsn = this.dsn;
-        Map<String, String> options = new Dsn(dsn).getOptions();
-        if (!options.containsKey("stacktrace.app.packages")) {
-            if (URI.create(dsn).getQuery() == null) {
-                dsn += '?';
-            } else {
-                dsn += '&';
+        SentryOptions options = new SentryOptions();
+        options.setDsn(this.dsn);
+        environment.ifPresent(options::setEnvironment);
+        tags.ifPresent(tags -> tags.forEach(options::setTag));
+        release.ifPresent(options::setRelease);
+        serverName.ifPresent(options::setServerName);
+        inAppIncludes.ifPresent(inAppIncludes -> inAppIncludes.forEach(options::addInAppInclude));
+        inAppExcludes.ifPresent(inAppExcludes -> inAppExcludes.forEach(options::addInAppExclude));
+        configurator.ifPresent(configurator -> {
+            try {
+                Class<?> klass = Class.forName(configurator);
+                if (!SentryConfigurator.class.isAssignableFrom(klass)) {
+                    throw new IllegalArgumentException("configurator class " + configurator + " does not implement " + SentryConfigurator.class.getName());
+                }
+                SentryConfigurator sentryConfigurator = ((Class<SentryConfigurator>) klass).getDeclaredConstructor().newInstance();
+                sentryConfigurator.configure(options);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalArgumentException("configurator class " + configurator + " not found", e);
+            } catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException("configurator class " + configurator + " does not define a default constructor", e);
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                throw new IllegalArgumentException("cannot invoke default constructor on configurator class " + configurator, e);
             }
-            dsn += "stacktrace.app.packages=" + stacktraceAppPackages.map(list -> list.stream().collect(Collectors.joining(","))).orElse("");
-        }
-        SentryClient sentryClient = SentryClientFactory.sentryClient(dsn, factory);
+        });
 
-        SentryAppender appender = new SentryAppenderEx();
+        SentryAppender appender = new SentryAppender();
+
+        appender.setOptions(options);
         appender.setName(APPENDER_NAME);
         appender.setContext(context);
-
-        environment.ifPresent(sentryClient::setEnvironment);
-        tags.ifPresent(sentryClient::setTags);
-        mdcTags.ifPresent(sentryClient::setMdcTags);
-        release.ifPresent(sentryClient::setRelease);
-        serverName.ifPresent(sentryClient::setServerName);
-        extra.ifPresent(sentryClient::setExtra);
-
-        Sentry.setStoredClient(sentryClient);
 
         appender.addFilter(levelFilterFactory.build(threshold));
         getFilterFactories().forEach(f -> appender.addFilter(f.build()));
         appender.start();
 
-        Appender<ILoggingEvent> asyncAppender = wrapAsync(appender, asyncAppenderFactory, context);
-
-        /*
-         * Since events are sent asynchronously by a logback worker thread, we loose context stored in thread local
-         * (breadcrumbs, user info, http info, last event id, tags, extra).
-         * The purpose of this appender is to save the thread local context into the logging event,
-         * and retrieve this information when building the Sentry event.
-         */
-        Appender<ILoggingEvent> asyncAppenderWithContext = new DelegateAppender(asyncAppender) {
-            @Override
-            public void doAppend(ILoggingEvent event) throws LogbackException {
-                super.doAppend(new LoggingEventWithContext(event));
-            }
-        };
-        addDroppingSentryLoggingFilter(asyncAppenderWithContext);
-
-        return asyncAppenderWithContext;
-    }
-
-    private void addDroppingSentryLoggingFilter(Appender<ILoggingEvent> appender) {
         final Filter<ILoggingEvent> filter = new DroppingSentryLoggingFilter();
         filter.start();
         appender.addFilter(filter);
+
+        return appender;
     }
 
 }
