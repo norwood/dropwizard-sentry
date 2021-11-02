@@ -64,7 +64,6 @@ appenders:
 | [`serverName`](https://docs.sentry.io/platforms/java/configuration/#server-name) | [empty] | Override the server name (rather than looking it up dynamically) | `10.0.0.1` |
 | [`inAppIncludes`](https://docs.sentry.io/platforms/java/configuration/#in-app-includes) | [empty] | List of package prefixes used by application code | `['com.example','com.foo']` |
 | [`inAppExcludes`](https://docs.sentry.io/platforms/java/configuration/#in-app-excludes) | [empty] | List of package prefixes not used by application code | `['com.thirdparty','com.anotherthirdparty']` |
-| [`ignoreExceptionsForType`](https://docs.sentry.io/platforms/java/configuration/#ignored-exceptions-for-type) | [empty] | List of exception types to ignore | `['']` |
 
 If you need to set configuration properties not listed above, append them to the `dsn` as described [here](https://docs.sentry.io/clients/java/config/#configuration-via-the-dsn).
 
