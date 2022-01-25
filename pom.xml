@@ -35,6 +35,12 @@
         <developerConnection>scm:git:git@github.com:dhatim/dropwizard-sentry.git</developerConnection>
         <url>git@github.com:dhatim/dropwizard-sentry.git</url>
     </scm>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
     <dependencies>
         <dependency>
             <groupId>io.dropwizard</groupId>
